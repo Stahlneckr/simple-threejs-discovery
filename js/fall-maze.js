@@ -165,17 +165,17 @@ FallMaze = function() {
       // distance
       var distance = Math.sqrt(((ball.position.x-platform_array[current_platform].hole.position.x)*(ball.position.x-platform_array[current_platform].hole.position.x))+((ball.position.z-platform_array[current_platform].hole.position.z)*(ball.position.z-platform_array[current_platform].hole.position.z)));
       if(distance < 25) {
-        console.log("BALL IN HOLE");
         scene.remove(platform_array[current_platform].platform);
         current_platform++;
-        setTimeout(function() {
-          scene.add(platform_array[current_platform-1].platform);
-        }, 250);
       }
-      else {}
 
-      camera.position.y -= .25;
-      skyBox.position.y -= .25;
+      if(camera.position.y-platform_array[current_platform].platform.position.y>200) {
+        camera.position.y -= .75;
+        skyBox.position.y -= .75;
+      } else {
+        camera.position.y -= .25;
+        skyBox.position.y -= .25;
+      }
       camera.lookAt(new THREE.Vector3(0,camera.position.y-200,0));
 
       renderer.render( scene, camera );
