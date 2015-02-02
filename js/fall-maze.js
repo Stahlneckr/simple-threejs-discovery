@@ -1,19 +1,21 @@
 FallMaze = function() {
   return {
-    scene           : null,
-    camera          : null,
-    renderer        : null,
-    skyBox          : null,
-    platform_array  : null,
-    hole_array      : null,
-    ball            : null,
-    controls        : null,
-    keyboard        : null,
+    scene             : null,
+    camera            : null,
+    renderer          : null,
+    skyBox            : null,
+    platform_array    : null,
+    hole_array        : null,
+    ball              : null,
+    controls          : null,
+    keyboard          : null,
+    current_platform  : null,
 
     sceneSetup: function() {
 
       // create scene
-      scene = new Physijs.Scene({ fixedTimeStep: 1 / 60 });
+      scene = new Physijs.Scene();
+      scene.setFixedTimeStep(1/200);
       scene.setGravity(new THREE.Vector3( 0, -500, 0 ));
       scene.fog = new THREE.FogExp2( 0xffffff, 0.00015 );
 
@@ -59,12 +61,14 @@ FallMaze = function() {
       skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
       scene.add( skyBox );
 
+      current_platform = 0;
+
     },
     ballAnimation: function() {
       var geometry = new THREE.SphereGeometry( 7,24,24 );
       // var material = new THREE.MeshBasicMaterial( { color: 0xFF9800 } );
       var material = Physijs.createMaterial( new THREE.MeshLambertMaterial( { color: 0xFF9800, reflectivity: 0.8 } ), 0.0, 0.8 );
-      ball = new Physijs.SphereMesh( geometry, material, 100 );
+      ball = new Physijs.ConvexMesh( geometry, material, 100 );
       ball.position.y = 100;
       ball.setCcdMotionThreshold( 0.1 );
       ball.setCcdSweptSphereRadius( 1 )
@@ -73,10 +77,11 @@ FallMaze = function() {
 
     },
     platformSetup: function() {
-      // // Boxx
+      //
       platform_array = [];
-      var geometry = new THREE.CubeGeometry( 500, 10, 500 );
-      var hole_geometry = new THREE.CubeGeometry( 50, 11, 50 );
+      var geometry = new THREE.BoxGeometry( 500, 10, 500 );
+      var hole_geometry = new THREE.CylinderGeometry( 25, 25, 10.1, 50, 1 );
+
 
       var floorTexture = new THREE.ImageUtils.loadTexture( 'images/floor01.jpg' );
       floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
@@ -91,30 +96,19 @@ FallMaze = function() {
         // platform
         platform_array[i].platform = new Physijs.BoxMesh(geometry, material, 0);
         platform_array[i].platform.position.y = -i*300;
-        // var platformBSP = new ThreeBSP( platform_array[i].platform );
 
         // hole
-        platform_array[i].hole = new Physijs.BoxMesh(hole_geometry, hole_material, 0);
-        platform_array[i].hole.position.y = -i*300;
-        platform_array[i].hole.position.x = Math.floor(Math.random()*(251))*(Math.random() < 0.5 ? -1 : 1);
-        platform_array[i].hole.position.z = Math.floor(Math.random()*(251))*(Math.random() < 0.5 ? -1 : 1);
-        // var holeBSP = new ThreeBSP( platform_array[i].hole );
-        // console.log(holeBSP.matrix);
-        // holeBSP.matrix.elements[0] = 10;
-        // holeBSP.matrix.elements[5] = 10;
-        // holeBSP.matrix.elements[10] = 10;
-        // holeBSP.matrix.elements[15] = 10;
-        // console.log(holeBSP.matrix);
+        platform_array[i].hole = new Physijs.CylinderMesh(hole_geometry, hole_material, 0);
+        // platform_array[i].hole.position.y = -i*300;
+        platform_array[i].hole.position.x = Math.floor(Math.random()*(201))*(Math.random() < 0.5 ? -1 : 1);
+        platform_array[i].hole.position.z = Math.floor(Math.random()*(201))*(Math.random() < 0.5 ? -1 : 1);
 
-        // platformBSP = platformBSP.subtract(holeBSP);
-        // platform_array[i].platform = platformBSP.toMesh(material);
-        // platform_array[i].platform.position.y = -i*300;
-        // platform_array[i].platform.position.x = 50;
-
-
+        // Combine hole and platform
+        platform_array[i].platform.add(platform_array[i].hole);
 
         scene.add( platform_array[i].platform );
-        scene.add( platform_array[i].hole );
+        // scene.add( platform_array[i].hole );
+
       }
 
     },
@@ -144,37 +138,41 @@ FallMaze = function() {
       var rotateAngle = Math.PI / 180;   // pi/2 radians (90 degrees) per second
 
       if ( keyboard.pressed("left") ) { 
-        if( platform_array[0].platform.rotation.z < 0.524 ) {
-          platform_array[0].platform.rotation.z += rotateAngle/2;
-          platform_array[0].platform.__dirtyRotation = true;
-          platform_array[0].hole.rotation.z += rotateAngle/2;
-          platform_array[0].hole.__dirtyRotation = true;
+        if( platform_array[current_platform].platform.rotation.z < 0.524 ) {
+          platform_array[current_platform].platform.rotation.z += rotateAngle/2;
+          platform_array[current_platform].platform.__dirtyRotation = true;
         }
       }
       if ( keyboard.pressed("right") ) { 
-        if(platform_array[0].platform.rotation.z > -0.524) {
-          platform_array[0].platform.rotation.z -= rotateAngle/2;
-          platform_array[0].platform.__dirtyRotation = true;
-          platform_array[0].hole.rotation.z -= rotateAngle/2;
-          platform_array[0].hole.__dirtyRotation = true;
+        if(platform_array[current_platform].platform.rotation.z > -0.524) {
+          platform_array[current_platform].platform.rotation.z -= rotateAngle/2;
+          platform_array[current_platform].platform.__dirtyRotation = true;
         }
       }
       if ( keyboard.pressed("up") ) { 
-        if( platform_array[0].platform.rotation.x < 0.524 ) {
-          platform_array[0].platform.rotation.x += rotateAngle/2;
-          platform_array[0].platform.__dirtyRotation = true;
-          platform_array[0].hole.rotation.x += rotateAngle/2;
-          platform_array[0].hole.__dirtyRotation = true;
+        if( platform_array[current_platform].platform.rotation.x < 0.524 ) {
+          platform_array[current_platform].platform.rotation.x += rotateAngle/2;
+          platform_array[current_platform].platform.__dirtyRotation = true;
         }
       }
       if ( keyboard.pressed("down") ) { 
-        if(platform_array[0].platform.rotation.x > -0.524) {
-          platform_array[0].platform.rotation.x -= rotateAngle/2;
-          platform_array[0].platform.__dirtyRotation = true;
-          platform_array[0].hole.rotation.x -= rotateAngle/2;
-          platform_array[0].hole.__dirtyRotation = true;
+        if(platform_array[current_platform].platform.rotation.x > -0.524) {
+          platform_array[current_platform].platform.rotation.x -= rotateAngle/2;
+          platform_array[current_platform].platform.__dirtyRotation = true;
         }
       }
+
+      // distance
+      var distance = Math.sqrt(((ball.position.x-platform_array[current_platform].hole.position.x)*(ball.position.x-platform_array[current_platform].hole.position.x))+((ball.position.z-platform_array[current_platform].hole.position.z)*(ball.position.z-platform_array[current_platform].hole.position.z)));
+      if(distance < 25) {
+        console.log("BALL IN HOLE");
+        scene.remove(platform_array[current_platform].platform);
+        current_platform++;
+        setTimeout(function() {
+          scene.add(platform_array[current_platform-1].platform);
+        }, 250);
+      }
+      else {}
 
       camera.position.y -= .25;
       skyBox.position.y -= .25;
