@@ -43,9 +43,10 @@ FallMaze = function() {
       keyboard = new THREEx.KeyboardState();
 
       // axes
-      var axes = new THREE.AxisHelper(100);
-      scene.add( axes );
+      // var axes = new THREE.AxisHelper(100);
+      // scene.add( axes );
       
+      // add skybox
       var imagePrefix = "images/alps-";
       var directions  = ["xpos", "xneg", "ypos", "yneg", "zpos", "zneg"];
       var imageSuffix = ".png";
@@ -61,34 +62,39 @@ FallMaze = function() {
       skyBox = new THREE.Mesh( skyGeometry, skyMaterial );
       scene.add( skyBox );
 
+      // start at 0
       current_platform = 0;
 
     },
-    ballAnimation: function() {
+    ballSetup: function() {
+      // ball
       var geometry = new THREE.SphereGeometry( 7,24,24 );
-      // var material = new THREE.MeshBasicMaterial( { color: 0xFF9800 } );
-      var material = Physijs.createMaterial( new THREE.MeshLambertMaterial( { color: 0xFF9800, reflectivity: 0.8 } ), 0.0, 0.8 );
+      var material = Physijs.createMaterial( new THREE.MeshLambertMaterial( { color: 0xFF9800, reflectivity: 1.0 } ), 0.0, 0.8 );
       ball = new Physijs.ConvexMesh( geometry, material, 100 );
       ball.position.y = 100;
-      ball.setCcdMotionThreshold( 0.1 );
+
+      // help ball not pass through platform
+      ball.setCcdMotionThreshold( 10 );
       ball.setCcdSweptSphereRadius( 1 )
 
       scene.add( ball );
 
     },
     platformSetup: function() {
-      //
+
       platform_array = [];
       var geometry = new THREE.BoxGeometry( 500, 10, 500 );
       var hole_geometry = new THREE.CylinderGeometry( 25, 25, 10.1, 50, 1 );
 
-
-      var floorTexture = new THREE.ImageUtils.loadTexture( 'images/floor01.jpg' );
-      floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
-      floorTexture.repeat.set( 10, 10 );
-      // var material = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
       var material = Physijs.createMaterial( new THREE.MeshLambertMaterial( { color: 0xEEEEEE } ), 0.2, 0.8  );
       var hole_material = Physijs.createMaterial( new THREE.MeshLambertMaterial( { color: 0x000000, side: THREE.DoubleSide } ), 0.2, 0.8  );
+
+      // textured floor material
+      // var floorTexture = new THREE.ImageUtils.loadTexture( 'images/floor01.jpg' );
+      // floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+      // floorTexture.repeat.set( 10, 10 );
+      // var material = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+
       for(var i=0; i<20; i++) {
 
         platform_array[i] = { platform: null, hole: null };
@@ -99,7 +105,6 @@ FallMaze = function() {
 
         // hole
         platform_array[i].hole = new Physijs.CylinderMesh(hole_geometry, hole_material, 0);
-        // platform_array[i].hole.position.y = -i*300;
         platform_array[i].hole.position.x = Math.floor(Math.random()*(201))*(Math.random() < 0.5 ? -1 : 1);
         platform_array[i].hole.position.z = Math.floor(Math.random()*(201))*(Math.random() < 0.5 ? -1 : 1);
 
@@ -135,7 +140,7 @@ FallMaze = function() {
       requestAnimationFrame( FallMaze.render );
       scene.simulate();
 
-      var rotateAngle = Math.PI / 180;   // pi/2 radians (90 degrees) per second
+      var rotateAngle = Math.PI / 180;
 
       if ( keyboard.pressed("left") ) { 
         if( platform_array[current_platform].platform.rotation.z < 0.524 ) {
@@ -162,8 +167,9 @@ FallMaze = function() {
         }
       }
 
-      // distance
+      // distance ball is from center of hole
       var distance = Math.sqrt(((ball.position.x-platform_array[current_platform].hole.position.x)*(ball.position.x-platform_array[current_platform].hole.position.x))+((ball.position.z-platform_array[current_platform].hole.position.z)*(ball.position.z-platform_array[current_platform].hole.position.z)));
+      // remove platform when ball touches the hole
       if(distance < 25) {
         scene.remove(platform_array[current_platform].platform);
         current_platform++;
@@ -177,6 +183,8 @@ FallMaze = function() {
         skyBox.position.y -= .25;
       }
       camera.lookAt(new THREE.Vector3(0,camera.position.y-200,0));
+
+      // add platform generation for infinite games
 
       renderer.render( scene, camera );
 
